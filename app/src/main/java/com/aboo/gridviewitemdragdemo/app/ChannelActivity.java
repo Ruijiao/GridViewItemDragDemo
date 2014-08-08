@@ -5,7 +5,6 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
-import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
@@ -24,21 +23,42 @@ import java.util.ArrayList;
  */
 public class ChannelActivity extends Activity implements OnItemClickListener {
 
+    // 点击类型
+    private static final int CLICK_TYPE_USER = 0;
+    private static final int CLICK_TYPE_STUDY = 1;
+    private static final int CLICK_TYPE_WORK = 2;
+    private static final int CLICK_TYPE_ENTERTAINMENT = 3;
+    private static final int CLICK_TYPE_SPORT = 4;
+    // 记录当前点击类型
+    private int mCurrentClickType = CLICK_TYPE_USER;
+
     //用户栏目的GRIDVIEW
     private DragGrid userGridView;
     // 其它栏目的GRIDVIEW
-    private OtherGridView otherGridView;
-    // 用户栏目对应的适配器，可以拖动
-    DragAdapter userAdapter;
-    // 其它栏目对应的适配器
-    OtherAdapter otherAdapter;
-    // 其它栏目列表
-    ArrayList<ChannelItem> otherChannelList = new ArrayList<ChannelItem>();
-    // 用户栏目列表
-    ArrayList<ChannelItem> userChannelList = new ArrayList<ChannelItem>();
-    // 是否在移动，由于这边是动画结束后才进行的数据更替，设置这个限制为了避免操作太频繁造成的数据错乱。
+    private OtherGridView studyGridView;
+    // 工作栏目的GRIDVIEW
+    private OtherGridView workGridView;
+    // 娱乐栏目的GRIDVIEW
+    private OtherGridView entertainmentGridView;
+    // 运动栏目的GRIDVIEW
+    private OtherGridView sportGridView;
 
-    boolean isMove = false;
+    // 用户栏目对应的适配器，可以拖动
+    private DragAdapter userAdapter;
+    // 其他栏目对应的适配器，不可以拖动
+    private OtherAdapter studyAdapter;
+    private OtherAdapter workAdapter;
+    private OtherAdapter entertainmentAdapter;
+    private OtherAdapter sportAdapter;
+
+    private ArrayList<ChannelItem> studyChannelList = new ArrayList<ChannelItem>();
+    private ArrayList<ChannelItem> userChannelList = new ArrayList<ChannelItem>();
+    private ArrayList<ChannelItem> workChannelList = new ArrayList<ChannelItem>();
+    private ArrayList<ChannelItem> entertainmentChannelList = new ArrayList<ChannelItem>();
+    private ArrayList<ChannelItem> sportChannelList = new ArrayList<ChannelItem>();
+
+    // 是否在移动，由于这边是动画结束后才进行的数据更替，设置这个限制为了避免操作太频繁造成的数据错乱。
+    private boolean isMove = false;
     private Context mContext;
 
     @Override
@@ -52,6 +72,17 @@ public class ChannelActivity extends Activity implements OnItemClickListener {
     }
 
     /**
+     * 初始化布局
+     */
+    private void initView() {
+        userGridView = (DragGrid) findViewById(R.id.userGridView);
+        studyGridView = (OtherGridView) findViewById(R.id.otherGridView);
+        workGridView = (OtherGridView) findViewById(R.id.workGridView);
+        entertainmentGridView = (OtherGridView) findViewById(R.id.entertainmentGridView);
+        sportGridView = (OtherGridView) findViewById(R.id.sportGridView);
+    }
+
+    /**
      * 初始化数据
      */
     private void initData() {
@@ -59,97 +90,230 @@ public class ChannelActivity extends Activity implements OnItemClickListener {
 
         userAdapter = new DragAdapter(this, userChannelList);
         userGridView.setAdapter(userAdapter);
-        otherAdapter = new OtherAdapter(this, otherChannelList);
-        otherGridView.setAdapter(otherAdapter);
-        //设置GRIDVIEW的ITEM的点击监听
-        otherGridView.setOnItemClickListener(this);
+        studyAdapter = new OtherAdapter(this, studyChannelList);
+        studyGridView.setAdapter(studyAdapter);
+        workAdapter = new OtherAdapter(this, workChannelList);
+        workGridView.setAdapter(workAdapter);
+        entertainmentAdapter = new OtherAdapter(this, entertainmentChannelList);
+        entertainmentGridView.setAdapter(entertainmentAdapter);
+        sportAdapter = new OtherAdapter(this, sportChannelList);
+        sportGridView.setAdapter(sportAdapter);
+
+        //设置GridView的ITEM的点击监听
+        studyGridView.setOnItemClickListener(this);
         userGridView.setOnItemClickListener(this);
+        workGridView.setOnItemClickListener(this);
+        entertainmentGridView.setOnItemClickListener(this);
+        sportGridView.setOnItemClickListener(this);
     }
 
     private void initChannelData() {
         SQLHelper sqlHelper = new SQLHelper(mContext);
         ChannelManage channelManage = ChannelManage.getManage(sqlHelper);
         userChannelList = (ArrayList<ChannelItem>) channelManage.getUserChannel();
-        otherChannelList = (ArrayList<ChannelItem>) channelManage.getOtherChannel();
+        studyChannelList = (ArrayList<ChannelItem>) channelManage.getStudyChannel();
+        workChannelList = (ArrayList<ChannelItem>) channelManage.getWorkChannel();
+        entertainmentChannelList = (ArrayList<ChannelItem>) channelManage.getEntertainmentChannel();
+        sportChannelList = (ArrayList<ChannelItem>) channelManage.getSportChannel();
     }
 
-    /**
-     * 初始化布局
-     */
-    private void initView() {
-        userGridView = (DragGrid) findViewById(R.id.userGridView);
-        otherGridView = (OtherGridView) findViewById(R.id.otherGridView);
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    /**
-     * GRIDVIEW对应的ITEM点击监听接口
-     */
     @Override
     public void onItemClick(AdapterView<?> parent, final View view, final int position, long id) {
         //如果点击的时候，之前动画还没结束，那么就让点击事件无效
         if (isMove) {
             return;
         }
+
         switch (parent.getId()) {
             case R.id.userGridView:
-
-                // TODO position为 0，1 的不可以进行任何操作
-                if (position != 0 && position != 1) {
-                    final ImageView moveImageView = getView(view);
-                    if (moveImageView != null) {
-                        TextView newTextView = (TextView) view.findViewById(R.id.text_item);
-                        final int[] startLocation = new int[2];
-                        newTextView.getLocationInWindow(startLocation);
-                        final ChannelItem channel = ((DragAdapter) parent.getAdapter()).getItem(position);//获取点击的频道内容
-                        otherAdapter.setVisible(false);
-                        //添加到最后一个
-                        otherAdapter.addItem(channel);
-                        new Handler().postDelayed(new Runnable() {
-                            public void run() {
-                                try {
-                                    int[] endLocation = new int[2];
-                                    //获取终点的坐标
-                                    otherGridView.getChildAt(otherGridView.getLastVisiblePosition()).getLocationInWindow(endLocation);
-                                    MoveAnim(moveImageView, startLocation, endLocation, channel, userGridView);
-                                    userAdapter.setRemove(position);
-                                } catch (Exception localException) {
-                                }
-                            }
-                        }, 50L);
-                    }
-                }
+                mCurrentClickType = CLICK_TYPE_USER;
+                deleteUserSelectedEvent(((DragAdapter) parent.getAdapter()).getItem(position), view, position);
                 break;
             case R.id.otherGridView:
-                final ImageView moveImageView = getView(view);
-                if (moveImageView != null) {
-                    TextView newTextView = (TextView) view.findViewById(R.id.text_item);
-                    final int[] startLocation = new int[2];
-                    newTextView.getLocationInWindow(startLocation);
-                    final ChannelItem channel = ((OtherAdapter) parent.getAdapter()).getItem(position);
-                    userAdapter.setVisible(false);
-                    //添加到最后一个
-                    userAdapter.addItem(channel);
-                    new Handler().postDelayed(new Runnable() {
-                        public void run() {
-                            try {
-                                int[] endLocation = new int[2];
-                                //获取终点的坐标
-                                userGridView.getChildAt(userGridView.getLastVisiblePosition()).getLocationInWindow(endLocation);
-                                MoveAnim(moveImageView, startLocation, endLocation, channel, otherGridView);
-                                otherAdapter.setRemove(position);
-                            } catch (Exception localException) {
-                            }
-                        }
-                    }, 50L);
-                }
+                mCurrentClickType = CLICK_TYPE_STUDY;
+                addOtherEvent(((OtherAdapter) parent.getAdapter()).getItem(position), view, position);
                 break;
+
+            case R.id.workGridView:
+                mCurrentClickType = CLICK_TYPE_WORK;
+                addOtherEvent(((OtherAdapter) parent.getAdapter()).getItem(position), view, position);
+                break;
+
+            case R.id.entertainmentGridView:
+                mCurrentClickType = CLICK_TYPE_ENTERTAINMENT;
+                addOtherEvent(((OtherAdapter) parent.getAdapter()).getItem(position), view, position);
+                break;
+
+            case R.id.sportGridView:
+                mCurrentClickType = CLICK_TYPE_SPORT;
+                addOtherEvent(((OtherAdapter) parent.getAdapter()).getItem(position), view, position);
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    /**
+     * 添加其他事项，包括学习、工作、娱乐、运动类型
+     *
+     * @param item
+     * @param view
+     * @param position
+     */
+    private void addOtherEvent(ChannelItem item, View view, final int position) {
+
+        final OtherGridView otherGridView;
+        final OtherAdapter otherAdapter;
+        switch (mCurrentClickType) {
+            case CLICK_TYPE_STUDY:
+                otherGridView = studyGridView;
+                otherAdapter = studyAdapter;
+                break;
+
+            case CLICK_TYPE_WORK:
+                otherGridView = workGridView;
+                otherAdapter = workAdapter;
+                break;
+
+            case CLICK_TYPE_ENTERTAINMENT:
+                otherGridView = entertainmentGridView;
+                otherAdapter = entertainmentAdapter;
+                break;
+
+            case CLICK_TYPE_SPORT:
+                otherGridView = sportGridView;
+                otherAdapter = sportAdapter;
+                break;
+
+            default:
+                otherGridView = null;
+                otherAdapter = null;
+                break;
+        }
+
+        final ImageView moveImageView3 = getView(view);
+        if (moveImageView3 != null) {
+            TextView newTextView = (TextView) view.findViewById(R.id.text_item);
+            final int[] startLocation = new int[2];
+            newTextView.getLocationInWindow(startLocation);
+
+            final ChannelItem channel = item;
+            userAdapter.setVisible(false);
+            userAdapter.addItem(channel);
+            new Handler().postDelayed(new Runnable() {
+                public void run() {
+                    try {
+                        int[] endLocation = new int[2];
+                        //获取终点的坐标
+                        userGridView.getChildAt(userGridView.getLastVisiblePosition()).getLocationInWindow(endLocation);
+                        MoveAnim(moveImageView3, startLocation, endLocation, channel, otherGridView);
+
+                        assert otherAdapter != null;
+                        otherAdapter.setRemove(position);
+                    } catch (Exception localException) {
+                        //
+                    }
+                }
+            }, 50L);
+        }
+    }
+
+    /**
+     * 删除用户已选择的事项
+     *
+     * @param item
+     * @param view
+     * @param position
+     */
+    private void deleteUserSelectedEvent(ChannelItem item, View view, final int position) {
+        // TODO position为 0，1 的不可以进行任何操作
+        if (position != 0 && position != 1) {
+            final ImageView moveImageView = getView(view);
+            if (moveImageView != null) {
+                TextView newTextView = (TextView) view.findViewById(R.id.text_item);
+                final int[] startLocation = new int[2];
+                newTextView.getLocationInWindow(startLocation);
+                final ChannelItem channel = item;//获取点击的频道内容
+
+                addOneItemInAdapter(channel);
+
+                new Handler().postDelayed(new Runnable() {
+                    public void run() {
+                        try {
+                            int[] endLocation = getEndLocation(channel);
+
+                            MoveAnim(moveImageView, startLocation, endLocation, channel, userGridView);
+                            userAdapter.setRemove(position);
+                        } catch (Exception localException) {
+                        }
+                    }
+                }, 50L);
+            }
+        }
+    }
+
+    /**
+     * 获取动画移动的终点坐标
+     *
+     * @param channel 点击的Item
+     * @return 终点坐标
+     */
+    private int[] getEndLocation(ChannelItem channel) {
+        int[] endLocation = new int[2];
+
+        switch (channel.getOriginalType()) {
+
+            case ChannelItem.CHANNEL_TYPE_STUDY:
+                studyGridView.getChildAt(studyGridView.getLastVisiblePosition()).getLocationInWindow(endLocation);
+                break;
+
+            case ChannelItem.CHANNEL_TYPE_WORK:
+                workGridView.getChildAt(workGridView.getLastVisiblePosition()).getLocationInWindow(endLocation);
+                break;
+
+            case ChannelItem.CHANNEL_TYPE_ENTERTAINMENT:
+                entertainmentGridView.getChildAt(entertainmentGridView.getLastVisiblePosition()).getLocationInWindow(endLocation);
+                break;
+
+            case ChannelItem.CHANNEL_TYPE_SPORT:
+                sportGridView.getChildAt(sportGridView.getLastVisiblePosition()).getLocationInWindow(endLocation);
+                break;
+
+            default:
+                break;
+        }
+
+        return endLocation;
+    }
+
+    /**
+     * 往目标适配器最后添加一项，
+     *
+     * @param channel 点击的Item
+     */
+    private void addOneItemInAdapter(ChannelItem channel) {
+        switch (channel.getOriginalType()) {
+            case ChannelItem.CHANNEL_TYPE_STUDY:
+                studyAdapter.setVisible(false);
+                studyAdapter.addItem(channel);
+                break;
+
+            case ChannelItem.CHANNEL_TYPE_WORK:
+                workAdapter.setVisible(false);
+                workAdapter.addItem(channel);
+                break;
+
+            case ChannelItem.CHANNEL_TYPE_ENTERTAINMENT:
+                entertainmentAdapter.setVisible(false);
+                entertainmentAdapter.addItem(channel);
+                break;
+
+            case ChannelItem.CHANNEL_TYPE_SPORT:
+                sportAdapter.setVisible(false);
+                sportAdapter.addItem(channel);
+                break;
+
             default:
                 break;
         }
@@ -196,19 +360,79 @@ public class ChannelActivity extends Activity implements OnItemClickListener {
             @Override
             public void onAnimationEnd(Animation animation) {
                 moveViewGroup.removeView(mMoveView);
-                // instanceof 方法判断2边实例是不是一样，判断点击的是DragGrid还是OtherGridView
-                if (clickGridView instanceof DragGrid) {
-                    otherAdapter.setVisible(true);
-                    otherAdapter.notifyDataSetChanged();
-                    userAdapter.remove();
-                } else {
-                    userAdapter.setVisible(true);
-                    userAdapter.notifyDataSetChanged();
-                    otherAdapter.remove();
+
+                // TODO 判断当前点击的频道类型
+                switch (mCurrentClickType) {
+                    case CLICK_TYPE_USER:
+                        changeOtherAdapter(moveChannel);
+
+                        userAdapter.remove();
+                        break;
+
+                    case CLICK_TYPE_STUDY:
+                        userAdapter.setVisible(true);
+                        userAdapter.notifyDataSetChanged();
+                        studyAdapter.remove();
+                        break;
+
+                    case CLICK_TYPE_WORK:
+                        userAdapter.setVisible(true);
+                        userAdapter.notifyDataSetChanged();
+                        workAdapter.remove();
+                        break;
+
+                    case CLICK_TYPE_ENTERTAINMENT:
+                        userAdapter.setVisible(true);
+                        userAdapter.notifyDataSetChanged();
+                        entertainmentAdapter.remove();
+                        break;
+
+                    case CLICK_TYPE_SPORT:
+                        userAdapter.setVisible(true);
+                        userAdapter.notifyDataSetChanged();
+                        sportAdapter.remove();
+                        break;
+
+                    default:
+                        break;
                 }
+
                 isMove = false;
             }
         });
+    }
+
+    /**
+     * 点击删除用户事项动画结束后，修改相应的数据适配器
+     *
+     * @param moveChannel 移动还原的Item
+     */
+    private void changeOtherAdapter(ChannelItem moveChannel) {
+        switch (moveChannel.getOriginalType()) {
+
+            case ChannelItem.CHANNEL_TYPE_STUDY:
+                studyAdapter.setVisible(true);
+                studyAdapter.notifyDataSetChanged();
+                break;
+
+            case ChannelItem.CHANNEL_TYPE_WORK:
+                workAdapter.setVisible(true);
+                workAdapter.notifyDataSetChanged();
+                break;
+
+            case ChannelItem.CHANNEL_TYPE_ENTERTAINMENT:
+                entertainmentAdapter.setVisible(true);
+                entertainmentAdapter.notifyDataSetChanged();
+                break;
+
+            case ChannelItem.CHANNEL_TYPE_SPORT:
+                sportAdapter.setVisible(true);
+                sportAdapter.notifyDataSetChanged();
+                break;
+
+            default:
+                break;
+        }
     }
 
     /**
@@ -265,7 +489,10 @@ public class ChannelActivity extends Activity implements OnItemClickListener {
         ChannelManage channelManage = ChannelManage.getManage(sqlHelper);
         channelManage.deleteAllChannel();
         channelManage.saveUserChannel(userAdapter.getChannelList());
-        channelManage.saveOtherChannel(otherAdapter.getChannelList());
+        channelManage.saveStudyChannel(studyAdapter.getChannelList());
+        channelManage.saveWorkChannel(workAdapter.getChannelList());
+        channelManage.saveEntertainmentChannel(entertainmentAdapter.getChannelList());
+        channelManage.saveSportChannel(sportAdapter.getChannelList());
     }
 
     @Override

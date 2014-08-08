@@ -9,34 +9,43 @@ public class ChannelItem implements Serializable {
     // 即用户选中的类型
     public static final int CHANNEL_TYPE_USER = 1;
     // 即用户没有选中的类型
-    public static final int CHANNEL_TYPE_OTHER = 0;
+    public static final int CHANNEL_TYPE_STUDY = 0;
+    // 工作类型
+    public static final int CHANNEL_TYPE_WORK = 2;
+    // 娱乐类型
+    public static final int CHANNEL_TYPE_ENTERTAINMENT = 3;
+    // 运动类型
+    public static final int CHANNEL_TYPE_SPORT = 4;
 
     private static final long serialVersionUID = -6465237897027410019L;
     /**
      * 栏目对应ID
      */
-    public Integer id;
+    private Integer id;
     /**
      * 栏目对应NAME
      */
-    public String name;
+    private String name;
     /**
      * 栏目在整体中的排序顺序  rank
      */
-    public Integer orderId;
+    private Integer orderId;
     /**
      * 栏目是否选中
      */
-    public Integer selected;
+    private Integer type;
+
+    private Integer originalType;
 
     public ChannelItem() {
     }
 
-    public ChannelItem(int id, String name, int orderId, int selected) {
+    public ChannelItem(int id, String name, int orderId, int type) {
         this.id = id;
         this.name = name;
         this.orderId = orderId;
-        this.selected = selected;
+        this.type = type;
+        this.originalType = type;
     }
 
     public int getId() {
@@ -51,8 +60,8 @@ public class ChannelItem implements Serializable {
         return this.orderId;
     }
 
-    public Integer getSelected() {
-        return this.selected;
+    public Integer getType() {
+        return this.type;
     }
 
     public void setId(int paramInt) {
@@ -67,12 +76,20 @@ public class ChannelItem implements Serializable {
         this.orderId = paramInt;
     }
 
-    public void setSelected(Integer paramInteger) {
-        this.selected = paramInteger;
+    public void setType(Integer paramInteger) {
+        this.type = paramInteger;
+    }
+
+    public Integer getOriginalType() {
+        return originalType;
+    }
+
+    public void setOriginalType(Integer originalType) {
+        this.originalType = originalType;
     }
 
     public String toString() {
         return "ChannelItem [id=" + this.id + ", name=" + this.name
-                + ", selected=" + this.selected + "]";
+                + ", type=" + this.type + ", originalType=" + this.originalType + "]";
     }
 }

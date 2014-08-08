@@ -13,7 +13,8 @@ public class SQLHelper extends SQLiteOpenHelper {
     public static final String ID = "id";
     public static final String NAME = "name";
     public static final String ORDER_ID = "orderId";
-    public static final String SELECTED = "selected";
+    public static final String TYPE = "type";
+    public static final String ORIGINAL_TYPE = "originalType";
     private Context context;
 
     public SQLHelper(Context context) {
@@ -33,7 +34,9 @@ public class SQLHelper extends SQLiteOpenHelper {
                 ID + " INTEGER , " +
                 NAME + " TEXT , " +
                 ORDER_ID + " INTEGER , " +
-                SELECTED + " SELECTED)";
+                TYPE + " INTEGER, " +
+                ORIGINAL_TYPE + " INTEGER "
+                + ");";
         db.execSQL(sql);
     }
 
